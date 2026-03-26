@@ -149,8 +149,8 @@ get_or_create_tunnel() {
 create_tunnel_config() {
     local tunnel_id=$1
     local domain=$2
-    local port=${3:-80}
-    local protocol=${4:-http}
+    local site_name=$(basename "$(pwd)")
+    local herd_domain="${site_name}.test"
 
     local config_file="$HOME/.cloudflared/config-$domain.yml"
 
@@ -160,7 +160,9 @@ credentials-file: $HOME/.cloudflared/$tunnel_id.json
 
 ingress:
   - hostname: $domain
-    service: $protocol://${domain}.test:$port
+    service: http://localhost:80
+    originRequest:
+      httpHostHeader: ${herd_domain}
   - service: http_status:404
 EOF
 
@@ -172,13 +174,8 @@ setup_dns_route() {
     local tunnel_id=$1
     local domain=$2
 
-    # Check if route already exists
-    if cloudflared tunnel route dns "$tunnel_id" "$domain" 2>&1 | grep -q "already exists"; then
-        print_info "DNS route already exists for $domain"
-    else
-        cloudflared tunnel route dns "$tunnel_id" "$domain"
-        print_success "Created DNS route for $domain"
-    fi
+    cloudflared tunnel route dns --overwrite-dns "$tunnel_id" "$domain" 2>/dev/null
+    print_success "DNS route configured for $domain"
 }
 
 # Link with Herd
@@ -297,11 +294,10 @@ main() {
             # Link with Herd
             link_with_herd "$domain"
 
-            # Check if SSL is needed
+            # Check if SSL is needed for local Herd site
             if [ "${3:-}" == "--secure" ]; then
                 print_info "Securing site with Herd..."
                 herd secure "$domain"
-                create_tunnel_config "$tunnel_id" "$domain" 443 https
             fi
 
             # Start tunnel

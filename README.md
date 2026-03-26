@@ -179,16 +179,19 @@ cftunnel share staging.mycompany.com
 ## How It Works
 
 1. **Tunnel Creation**: Creates a Cloudflare tunnel for your domain
-2. **DNS Configuration**: Automatically sets up DNS routing through Cloudflare
-3. **Herd Integration**: Links your domain with Laravel Herd's local server
-4. **Configuration Persistence**: Saves tunnel information for reuse
+2. **DNS Configuration**: Automatically sets up DNS routing through Cloudflare (overwrites stale records)
+3. **Host Header Routing**: Sends the correct `Host` header (`project.test`) so Herd serves the right site
+4. **Herd Integration**: Links your domain with Laravel Herd's local server
+5. **Configuration Persistence**: Saves tunnel information for reuse
 
 ```
 ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
 │   Your Domain   │───▶│ Cloudflare Tunnel │───▶│ Laravel Herd    │
-│ (example.com)   │    │                  │    │ (example.test)  │
+│ (example.com)   │    │  (Host: *.test)  │    │ (example.test)  │
 └─────────────────┘    └──────────────────┘    └─────────────────┘
 ```
+
+> **Note:** cftunnel detects the Herd site name from your current directory (e.g., `~/Sites/myapp` becomes `myapp.test`).
 
 ## Configuration
 
@@ -241,7 +244,7 @@ Download and install Laravel Herd from [herd.laravel.com](https://herd.laravel.c
 
 #### "DNS route already exists"
 
-This is usually harmless - cftunnel will use the existing route.
+cftunnel automatically overwrites stale DNS records, so this should not occur. If it does, run `cftunnel cleanup yourdomain.com` and try again.
 
 ### Debug Mode
 
@@ -301,6 +304,12 @@ Since this is a Bash script, testing involves:
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Changelog
+
+### v1.1.0
+
+- Fix Host header routing for Herd (uses `httpHostHeader` so Herd serves the correct site)
+- Auto-detect Herd site name from current directory
+- Use `--overwrite-dns` to avoid stale CNAME conflicts
 
 ### v1.0.0
 
